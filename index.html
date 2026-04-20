@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- html2canvas -->
+    <!-- html2canvas - ใช้เวอร์ชันเสถียรล่าสุด -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@100;400;700&display=swap');
@@ -66,12 +66,13 @@
         const App = () => {
             const [productName, setProductName] = useState('สินค้าตัวอย่าง');
             const [channel, setChannel] = useState('Line / Facebook');
-            const [basePrice, setBasePrice] = useState(100);
+            const [basePrice, setBasePrice] = useState(11408.73);
             const [quantity, setQuantity] = useState(1);
             const [tiers, setTiers] = useState([
-                { id: 1, minQty: 10, specialPrice: 95 },
-                { id: 2, minQty: 20, specialPrice: 90 }
+                { id: 1, minQty: 10, specialPrice: 10756.80 },
+                { id: 2, minQty: 20, specialPrice: 9778 }
             ]);
+            const [isExporting, setIsExporting] = useState(false);
 
             const reportRef = useRef(null);
 
@@ -94,19 +95,49 @@
                 ));
             };
 
-            const exportAsImage = () => {
-                if (typeof html2canvas === 'undefined') return;
-                html2canvas(reportRef.current, {
-                    scale: 3,
-                    useCORS: true,
-                    backgroundColor: '#ffffff',
-                    borderRadius: 40
-                }).then(canvas => {
+            // ฟังก์ชัน Export ที่ปรับปรุงใหม่ให้เสถียรบน GitHub Pages
+            const exportAsImage = async () => {
+                if (typeof html2canvas === 'undefined' || isExporting) return;
+                
+                setIsExporting(true);
+                try {
+                    // รอให้ Font โหลดเสร็จสมบูรณ์
+                    if (document.fonts) {
+                        await document.fonts.ready;
+                    }
+
+                    // เพิ่ม Delay เล็กน้อยเพื่อให้ UI อัปเดตครบถ้วน
+                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                    const canvas = await html2canvas(reportRef.current, {
+                        scale: 2.5, // ลดสเกลลงนิดหน่อยเพื่อความเร็วแต่ยังชัด
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        borderRadius: 40,
+                        logging: false
+                    });
+
+                    // สร้าง Link และจำลองการคลิกแบบเสถียร
+                    const imageData = canvas.toDataURL("image/png", 1.0);
                     const link = document.createElement('a');
-                    link.download = `pricing-report-${productName}.png`;
-                    link.href = canvas.toDataURL("image/png");
+                    link.style.display = 'none';
+                    link.href = imageData;
+                    link.download = `pricing-report-${productName || 'export'}.png`;
+                    
+                    document.body.appendChild(link);
                     link.click();
-                });
+                    
+                    // หน่วงเวลาเล็กน้อยก่อนลบ Link ออก
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        setIsExporting(false);
+                    }, 100);
+
+                } catch (error) {
+                    console.error("Export Error:", error);
+                    setIsExporting(false);
+                }
             };
 
             return (
@@ -128,9 +159,11 @@
                                 </button>
                                 <button 
                                     onClick={exportAsImage}
-                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95"
+                                    disabled={isExporting}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95 ${isExporting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'}`}
                                 >
-                                    <Icon name="download" size={18} /> บันทึกรูปภาพ
+                                    <Icon name="download" size={18} /> 
+                                    {isExporting ? 'กำลังบันทึก...' : 'บันทึกรูปภาพ'}
                                 </button>
                             </div>
                         </div>
@@ -182,16 +215,16 @@
                                                     type="number" 
                                                     value={basePrice}
                                                     onChange={(e) => handleNumberChange(e.target.value, setBasePrice)}
-                                                    placeholder="0"
+                                                    placeholder="0.00"
                                                     className="w-full bg-transparent border-b-2 border-gray-100 px-1 py-2 text-2xl font-bold text-blue-600 outline-none focus:border-blue-500"
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">จำนวนที่สั่งซื้อ</label>
                                                 <input 
-                                                    type="number" 
+                                                    type="text" 
                                                     value={quantity}
-                                                    onChange={(e) => handleNumberChange(e.target.value, setQuantity)}
+                                                    onChange={(e) => setQuantity(e.target.value)}
                                                     placeholder="0"
                                                     className="w-full bg-transparent border-b-2 border-gray-100 px-1 py-2 text-2xl font-bold text-gray-700 outline-none focus:border-blue-500"
                                                 />
@@ -210,10 +243,12 @@
 
                                     <div className="grid grid-cols-1 gap-4">
                                         {tiers.map((tier) => {
-                                            const bPrice = basePrice || 0;
-                                            const sPrice = tier.specialPrice || 0;
-                                            const discountPercent = bPrice > 0 ? (((bPrice - sPrice) / bPrice) * 100).toFixed(1) : 0;
-                                            const savingsPerUnit = bPrice - sPrice;
+                                            const bPrice = Number(basePrice) || 0;
+                                            const sPrice = Number(tier.specialPrice) || 0;
+                                            
+                                            // คำนวณทศนิยม 2 ตำแหน่ง
+                                            const discountPercent = bPrice > 0 ? (((bPrice - sPrice) / bPrice) * 100).toFixed(2) : "0.00";
+                                            const savingsPerUnit = (bPrice - sPrice).toFixed(2);
                                             
                                             return (
                                                 <div key={tier.id} className="relative bg-white border border-gray-100 rounded-[1.5rem] p-6 shadow-sm hover:shadow-md transition-shadow group">
@@ -228,7 +263,7 @@
                                                         <div>
                                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">ซื้อตั้งแต่ (หน่วย)</label>
                                                             <input 
-                                                                type="number" 
+                                                                type="text" 
                                                                 value={tier.minQty}
                                                                 onChange={(e) => updateTier(tier.id, 'minQty', e.target.value)}
                                                                 placeholder="0"
@@ -240,8 +275,8 @@
                                                             <input 
                                                                 type="number" 
                                                                 value={tier.specialPrice}
-                                                                onChange={(e) => updateTier(tier.id, 'specialPrice', e.target.value)}
-                                                                placeholder="0"
+                                                                onChange={(e) => handleNumberChange(e.target.value, (val) => updateTier(tier.id, 'specialPrice', val))}
+                                                                placeholder="0.00"
                                                                 className="w-full text-lg font-bold text-indigo-600 border-b border-gray-100 py-1 outline-none focus:border-indigo-500 bg-transparent"
                                                             />
                                                         </div>
@@ -256,7 +291,9 @@
                                                         </div>
                                                         <div className="text-right">
                                                             <span className="text-xl font-black text-emerald-600">{discountPercent}%</span>
-                                                            <span className="text-gray-400 text-xs ml-2 font-medium">(ลดไป ฿{savingsPerUnit})</span>
+                                                            <span className="text-gray-400 text-xs ml-2 font-medium">
+                                                                (ลดไป ฿{Number(savingsPerUnit).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
