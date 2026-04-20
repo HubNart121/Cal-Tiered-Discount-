@@ -18,7 +18,7 @@
             font-family: 'Sarabun', sans-serif; 
             -webkit-tap-highlight-color: transparent;
         }
-        /* ซ่อนลูกศรใน input number */
+        /* ซ่อนลูกศรใน input number กรณีใช้ type="number" */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -34,6 +34,19 @@
 
     <script type="text/babel">
         const { useState, useRef } = React;
+
+        // ฟังก์ชันสำหรับใส่ Comma ให้กับตัวเลข (String/Number)
+        const formatNumberWithCommas = (value) => {
+            if (value === null || value === undefined || value === '') return '';
+            const parts = value.toString().split(".");
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            return parts.join(".");
+        };
+
+        // ฟังก์ชันสำหรับดึงค่าตัวเลขออกมาจาก String ที่มี Comma
+        const parseValueFromCommas = (value) => {
+            return value.replace(/,/g, '');
+        };
 
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
@@ -81,8 +94,13 @@
 
             const reportRef = useRef(null);
 
-            const handleNumberChange = (value, setter) => {
-                setter(value === '' ? '' : Number(value));
+            // ปรับปรุงฟังก์ชันเปลี่ยนค่าตัวเลขให้รองรับ Comma
+            const handleNumberInputChange = (value, setter) => {
+                const cleanValue = parseValueFromCommas(value);
+                // อนุญาตให้กรอกแค่ตัวเลข จุดทศนิยม และต้องไม่เป็น NaN
+                if (cleanValue === '' || !isNaN(cleanValue)) {
+                    setter(cleanValue);
+                }
             };
 
             const addTier = () => {
@@ -95,8 +113,14 @@
             };
 
             const updateTier = (id, field, value) => {
+                let finalValue = value;
+                if (field === 'specialPrice') {
+                    finalValue = parseValueFromCommas(value);
+                    if (finalValue !== '' && isNaN(finalValue)) return;
+                }
+                
                 setTiers(tiers.map(tier => 
-                    tier.id === id ? { ...tier, [field]: value } : tier
+                    tier.id === id ? { ...tier, [field]: finalValue } : tier
                 ));
             };
 
@@ -194,9 +218,9 @@
                                             <div className="space-y-2">
                                                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">ราคาปกติ/หน่วย (฿)</label>
                                                 <input 
-                                                    type="number" 
-                                                    value={basePrice}
-                                                    onChange={(e) => handleNumberChange(e.target.value, setBasePrice)}
+                                                    type="text" 
+                                                    value={formatNumberWithCommas(basePrice)}
+                                                    onChange={(e) => handleNumberInputChange(e.target.value, setBasePrice)}
                                                     className="w-full bg-transparent border-b-2 border-gray-100 px-1 py-2 text-xl md:text-2xl font-bold text-blue-600 outline-none focus:border-blue-500"
                                                 />
                                             </div>
@@ -251,9 +275,9 @@
                                                         <div className="space-y-1.5">
                                                             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">ราคาพิเศษ/หน่วย (฿)</label>
                                                             <input 
-                                                                type="number" 
-                                                                value={tier.specialPrice}
-                                                                onChange={(e) => updateTier(tier.id, 'specialPrice', e.target.value === '' ? '' : Number(e.target.value))}
+                                                                type="text" 
+                                                                value={formatNumberWithCommas(tier.specialPrice)}
+                                                                onChange={(e) => updateTier(tier.id, 'specialPrice', e.target.value)}
                                                                 className="w-full text-lg font-bold text-indigo-600 border-b border-gray-100 py-1 outline-none focus:border-indigo-500 bg-transparent"
                                                             />
                                                         </div>
