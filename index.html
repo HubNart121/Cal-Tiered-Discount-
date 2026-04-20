@@ -10,26 +10,31 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- html2canvas - ใช้เวอร์ชันเสถียรล่าสุด -->
+    <!-- html2canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@100;400;700&display=swap');
-        body { font-family: 'Sarabun', sans-serif; }
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
         /* ซ่อนลูกศรใน input number */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
+        .report-shadow {
+            box-shadow: 0 10px 50px -12px rgba(0, 0, 0, 0.08);
+        }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-[#F9FBFF]">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useRef, useEffect } = React;
+        const { useState, useRef } = React;
 
-        // ไอคอน SVG แบบ Inline - แก้ไข Error Adjacent JSX elements
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
                 shoppingCart: <path d="m3.97 2 1.27 7.27c.19 1.1.97 1.73 1.95 1.73H17.4c.94 0 1.7-.58 1.93-1.47L22 2H3.97ZM7.19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2ZM16.19 15c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2Z" />,
@@ -64,13 +69,13 @@
         };
 
         const App = () => {
-            const [productName, setProductName] = useState('สินค้าตัวอย่าง');
-            const [channel, setChannel] = useState('Line / Facebook');
+            const [productName, setProductName] = useState('air Bag Machine');
+            const [channel, setChannel] = useState('Alibaba');
             const [basePrice, setBasePrice] = useState(11408.73);
-            const [quantity, setQuantity] = useState(1);
+            const [quantity, setQuantity] = useState('1-50');
             const [tiers, setTiers] = useState([
-                { id: 1, minQty: 10, specialPrice: 10756.80 },
-                { id: 2, minQty: 20, specialPrice: 9778 }
+                { id: 1, minQty: '51-100', specialPrice: 10756.80 },
+                { id: 2, minQty: '101', specialPrice: 9778 }
             ]);
             const [isExporting, setIsExporting] = useState(false);
 
@@ -91,167 +96,141 @@
 
             const updateTier = (id, field, value) => {
                 setTiers(tiers.map(tier => 
-                    tier.id === id ? { ...tier, [field]: value === '' ? '' : Number(value) } : tier
+                    tier.id === id ? { ...tier, [field]: value } : tier
                 ));
             };
 
-            // ฟังก์ชัน Export ที่ปรับปรุงใหม่ให้เสถียรบน GitHub Pages
             const exportAsImage = async () => {
                 if (typeof html2canvas === 'undefined' || isExporting) return;
-                
                 setIsExporting(true);
                 try {
-                    // รอให้ Font โหลดเสร็จสมบูรณ์
-                    if (document.fonts) {
-                        await document.fonts.ready;
-                    }
-
-                    // เพิ่ม Delay เล็กน้อยเพื่อให้ UI อัปเดตครบถ้วน
+                    if (document.fonts) await document.fonts.ready;
                     await new Promise(resolve => setTimeout(resolve, 500));
-
                     const canvas = await html2canvas(reportRef.current, {
-                        scale: 2.5, // ลดสเกลลงนิดหน่อยเพื่อความเร็วแต่ยังชัด
+                        scale: 3,
                         useCORS: true,
-                        allowTaint: true,
                         backgroundColor: '#ffffff',
                         borderRadius: 40,
-                        logging: false
                     });
-
-                    // สร้าง Link และจำลองการคลิกแบบเสถียร
-                    const imageData = canvas.toDataURL("image/png", 1.0);
                     const link = document.createElement('a');
-                    link.style.display = 'none';
-                    link.href = imageData;
-                    link.download = `pricing-report-${productName || 'export'}.png`;
-                    
-                    document.body.appendChild(link);
+                    link.href = canvas.toDataURL("image/png");
+                    link.download = `pricing-report.png`;
                     link.click();
-                    
-                    // หน่วงเวลาเล็กน้อยก่อนลบ Link ออก
-                    setTimeout(() => {
-                        document.body.removeChild(link);
-                        setIsExporting(false);
-                    }, 100);
-
+                    setIsExporting(false);
                 } catch (error) {
-                    console.error("Export Error:", error);
+                    console.error(error);
                     setIsExporting(false);
                 }
             };
 
             return (
-                <div className="min-h-screen bg-gray-50 p-4 md:p-10 font-sans">
-                    <div className="max-w-2xl mx-auto space-y-8">
+                <div className="min-h-screen p-4 md:p-10 flex flex-col items-center">
+                    <div className="w-full max-w-xl space-y-6">
                         
                         {/* Control Panel */}
-                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex flex-wrap gap-4 items-center justify-between">
-                            <h1 className="font-bold text-gray-700 flex items-center gap-2">
-                                <Icon name="tag" className="text-blue-500" />
-                                ระบบจัดการราคาส่วนลด
-                            </h1>
-                            <div className="flex gap-2">
+                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                                <Icon name="tag" className="text-blue-500 flex-shrink-0" size={18} />
+                                <h1 className="font-bold text-gray-700 text-sm md:text-base truncate">ระบบจัดการราคาส่วนลด</h1>
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0">
                                 <button 
                                     onClick={addTier}
-                                    className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-100 transition-all"
+                                    className="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl text-xs md:text-sm font-bold hover:bg-indigo-100 transition-all"
                                 >
-                                    <Icon name="plus" size={18} /> เพิ่มขั้น
+                                    <Icon name="plus" size={16} /> <span>เพิ่มขั้น</span>
                                 </button>
                                 <button 
                                     onClick={exportAsImage}
                                     disabled={isExporting}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95 ${isExporting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'}`}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-bold shadow-lg shadow-blue-100 transition-all active:scale-95 ${isExporting ? 'bg-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
                                 >
-                                    <Icon name="download" size={18} /> 
-                                    {isExporting ? 'กำลังบันทึก...' : 'บันทึกรูปภาพ'}
+                                    <Icon name="download" size={16} /> <span>{isExporting ? 'บันทึก...' : 'บันทึกรูปภาพ'}</span>
                                 </button>
                             </div>
                         </div>
 
-                        {/* Report UI */}
+                        {/* Report Canvas */}
                         <div 
                             ref={reportRef} 
-                            className="bg-white rounded-[2.5rem] shadow-xl overflow-hidden border border-gray-100 pb-12"
+                            className="bg-white rounded-[2.5rem] report-shadow overflow-hidden border border-gray-50 pb-10"
                         >
-                            <div className="p-8 md:p-12 space-y-10">
+                            <div className="p-6 md:p-10 space-y-10">
+                                
+                                {/* Section 1: ข้อมูลสินค้า */}
                                 <section>
-                                    <div className="flex items-center gap-3 mb-8 text-blue-600 font-bold text-xl">
-                                        <div className="p-2 bg-blue-50 rounded-xl">
-                                            <Icon name="shoppingCart" size={24} />
+                                    <div className="flex items-center gap-3 mb-8 text-blue-600 font-bold text-lg md:text-xl px-2">
+                                        <div className="p-2.5 bg-blue-50 rounded-2xl">
+                                            <Icon name="shoppingCart" size={22} />
                                         </div>
                                         <h2>ข้อมูลสินค้าและราคาปกติ</h2>
                                     </div>
 
-                                    <div className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">ชื่อสินค้า/บริการ</label>
+                                    <div className="space-y-6 px-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                                            <div className="space-y-2">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">ชื่อสินค้า/บริการ</label>
                                                 <input 
                                                     type="text" 
                                                     value={productName}
                                                     onChange={(e) => setProductName(e.target.value)}
-                                                    className="w-full bg-gray-50/50 border-b-2 border-gray-100 px-1 py-2 text-lg font-medium focus:ring-0 focus:border-blue-500 transition-all outline-none"
-                                                    placeholder="ระบุชื่อสินค้า..."
+                                                    className="w-full bg-gray-50/50 border-b-2 border-gray-100 px-1 py-2 text-base md:text-lg font-medium focus:border-blue-500 transition-all outline-none"
                                                 />
                                             </div>
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-1">
+                                            <div className="space-y-2">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1 flex items-center gap-1">
                                                     <Icon name="share" size={10} /> ช่องทาง
                                                 </label>
                                                 <input 
                                                     type="text" 
                                                     value={channel}
                                                     onChange={(e) => setChannel(e.target.value)}
-                                                    className="w-full bg-gray-50/50 border-b-2 border-gray-100 px-1 py-2 text-lg font-medium focus:ring-0 focus:border-blue-500 transition-all outline-none text-gray-600"
-                                                    placeholder="ระบุช่องทาง..."
+                                                    className="w-full bg-gray-50/50 border-b-2 border-gray-100 px-1 py-2 text-base md:text-lg font-medium focus:border-blue-500 transition-all outline-none text-gray-600"
                                                 />
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-8 pt-2">
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">ราคาปกติ/หน่วย (฿)</label>
+                                        <div className="grid grid-cols-2 gap-6 md:gap-8 pt-2">
+                                            <div className="space-y-2">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">ราคาปกติ/หน่วย (฿)</label>
                                                 <input 
                                                     type="number" 
                                                     value={basePrice}
                                                     onChange={(e) => handleNumberChange(e.target.value, setBasePrice)}
-                                                    placeholder="0.00"
-                                                    className="w-full bg-transparent border-b-2 border-gray-100 px-1 py-2 text-2xl font-bold text-blue-600 outline-none focus:border-blue-500"
+                                                    className="w-full bg-transparent border-b-2 border-gray-100 px-1 py-2 text-xl md:text-2xl font-bold text-blue-600 outline-none focus:border-blue-500"
                                                 />
                                             </div>
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">จำนวนที่สั่งซื้อ</label>
+                                            <div className="space-y-2">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-[0.1em] ml-1">จำนวนที่สั่งซื้อ</label>
                                                 <input 
                                                     type="text" 
                                                     value={quantity}
                                                     onChange={(e) => setQuantity(e.target.value)}
-                                                    placeholder="0"
-                                                    className="w-full bg-transparent border-b-2 border-gray-100 px-1 py-2 text-2xl font-bold text-gray-700 outline-none focus:border-blue-500"
+                                                    className="w-full bg-transparent border-b-2 border-gray-100 px-1 py-2 text-xl md:text-2xl font-bold text-gray-700 outline-none focus:border-blue-500"
                                                 />
                                             </div>
                                         </div>
                                     </div>
                                 </section>
 
+                                {/* Section 2: ขั้นบันไดราคา */}
                                 <section>
-                                    <div className="flex items-center gap-3 mb-8 text-indigo-600 font-bold text-xl">
-                                        <div className="p-2 bg-indigo-50 rounded-xl">
-                                            <Icon name="calculator" size={24} />
+                                    <div className="flex items-center gap-3 mb-8 text-indigo-600 font-bold text-lg md:text-xl px-2">
+                                        <div className="p-2.5 bg-indigo-50 rounded-2xl">
+                                            <Icon name="calculator" size={22} />
                                         </div>
                                         <h2>กำหนดราคาแบบขั้นบันได</h2>
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-4">
+                                    <div className="grid grid-cols-1 gap-5 px-2">
                                         {tiers.map((tier) => {
                                             const bPrice = Number(basePrice) || 0;
                                             const sPrice = Number(tier.specialPrice) || 0;
-                                            
-                                            // คำนวณทศนิยม 2 ตำแหน่ง
                                             const discountPercent = bPrice > 0 ? (((bPrice - sPrice) / bPrice) * 100).toFixed(2) : "0.00";
                                             const savingsPerUnit = (bPrice - sPrice).toFixed(2);
                                             
                                             return (
-                                                <div key={tier.id} className="relative bg-white border border-gray-100 rounded-[1.5rem] p-6 shadow-sm hover:shadow-md transition-shadow group">
+                                                <div key={tier.id} className="relative bg-white border border-gray-100 rounded-[2rem] p-5 md:p-6 shadow-sm hover:shadow-md transition-all group">
                                                     <button 
                                                         onClick={() => removeTier(tier.id)}
                                                         className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors p-1"
@@ -259,41 +238,43 @@
                                                         <Icon name="trash" size={16} />
                                                     </button>
 
-                                                    <div className="grid grid-cols-2 gap-6 mb-4">
-                                                        <div>
-                                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">ซื้อตั้งแต่ (หน่วย)</label>
+                                                    <div className="grid grid-cols-2 gap-5 md:gap-8 mb-5">
+                                                        <div className="space-y-1.5">
+                                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">ซื้อตั้งแต่ (หน่วย)</label>
                                                             <input 
                                                                 type="text" 
                                                                 value={tier.minQty}
                                                                 onChange={(e) => updateTier(tier.id, 'minQty', e.target.value)}
-                                                                placeholder="0"
                                                                 className="w-full text-lg font-bold text-gray-700 border-b border-gray-100 py-1 outline-none focus:border-indigo-500 bg-transparent"
                                                             />
                                                         </div>
-                                                        <div>
-                                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">ราคาพิเศษ/หน่วย (฿)</label>
+                                                        <div className="space-y-1.5">
+                                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">ราคาพิเศษ/หน่วย (฿)</label>
                                                             <input 
                                                                 type="number" 
                                                                 value={tier.specialPrice}
-                                                                onChange={(e) => handleNumberChange(e.target.value, (val) => updateTier(tier.id, 'specialPrice', val))}
-                                                                placeholder="0.00"
+                                                                onChange={(e) => updateTier(tier.id, 'specialPrice', e.target.value === '' ? '' : Number(e.target.value))}
                                                                 className="w-full text-lg font-bold text-indigo-600 border-b border-gray-100 py-1 outline-none focus:border-indigo-500 bg-transparent"
                                                             />
                                                         </div>
                                                     </div>
 
-                                                    <div className="bg-emerald-50/60 rounded-2xl p-4 flex items-center justify-between">
+                                                    <div className="bg-[#F2FAF6] rounded-2xl p-4 md:p-5 flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="bg-white p-2 rounded-lg shadow-sm text-emerald-500">
+                                                            <div className="bg-white p-2 rounded-xl shadow-sm text-emerald-500">
                                                                 <Icon name="package" size={18} />
                                                             </div>
-                                                            <span className="text-sm font-bold text-emerald-700">คิดเป็นส่วนลด:</span>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[11px] font-bold text-emerald-800 leading-tight">คิดเป็น</span>
+                                                                <span className="text-[11px] font-bold text-emerald-800 leading-tight">ส่วนลด:</span>
+                                                            </div>
                                                         </div>
-                                                        <div className="text-right">
-                                                            <span className="text-xl font-black text-emerald-600">{discountPercent}%</span>
-                                                            <span className="text-gray-400 text-xs ml-2 font-medium">
-                                                                (ลดไป ฿{Number(savingsPerUnit).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})})
-                                                            </span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xl md:text-2xl font-black text-emerald-600 leading-none">{discountPercent}%</span>
+                                                            <div className="flex flex-col items-end border-l border-emerald-100 pl-3">
+                                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">ลดไป</span>
+                                                                <span className="text-xs font-bold text-emerald-700/70">฿{Number(savingsPerUnit).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -304,7 +285,7 @@
                             </div>
                         </div>
 
-                        <p className="text-center text-gray-400 text-[10px] font-bold pb-10 uppercase tracking-[0.2em]">
+                        <p className="text-center text-gray-400 text-[9px] font-bold pb-6 uppercase tracking-[0.3em]">
                             Pricing Tier Management Tool
                         </p>
                     </div>
